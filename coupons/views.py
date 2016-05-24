@@ -9,6 +9,18 @@ from coupons.validators import *
 from coupons.models import *
 from django.db import IntegrityError
 
+def errorHandler(e):
+    response = dict()
+
+    if len(e.args) == 3 and e.args[2] == 400:
+        response['errorCode'] = e.args[0]
+        response['errorMessage'] = e.args[1]
+        return HttpResponseBadRequest(json.dumps(response),content_type="application/json")
+
+    response['errorMessage'] = str(e)
+    return HttpResponseBadRequest(json.dumps(response),content_type="application/json")
+
+
 @require_http_methods(["POST"])
 def create(request):
     response = dict()
@@ -47,27 +59,34 @@ def create(request):
         return HttpResponse(json.dumps(response), content_type="application/json")
 
     except ValueError as e:
-        if len(e.args) == 3 and e.args[2] == 400:
-            response['errorCode'] = e.args[0]
-            response['errorMessage'] = e.args[1]
-            return HttpResponseBadRequest(json.dumps(response),content_type="application/json")
-
-        response['errorMessage'] = str(e)
-        return HttpResponseBadRequest(json.dumps(response),content_type="application/json")
-
+        return errorHandler(e)
 
 
 @require_http_methods(["POST"])
 def update(request):
     response = dict()
 
+    try:
+        updateValidator(request);
+        data = json.loads(request.body)
 
-    return HttpResponse(json.dumps(response), content_type="application/json")
+
+        return HttpResponse(json.dumps(response), content_type="application/json")
+
+    except ValueError as e:
+        return errorHandler(e)
 
 
 @require_http_methods(["POST"])
 def apply(request):
     response = dict()
 
+    try:
+        applyValidator(request);
+        data = json.loads(request.body)
 
-    return HttpResponse(json.dumps(response), content_type="application/json")
+
+        return HttpResponse(json.dumps(response), content_type="application/json")
+
+    except ValueError as e:
+        return errorHandler(e)
