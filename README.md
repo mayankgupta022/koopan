@@ -7,6 +7,6 @@ A simple application in django with mysql database - to create, update and apply
 Setting up the project
 ----------------------
 
-python manage.py makemigrations
-python manage.py migrate
-python manage.py loaddata script.json
+python manage.py makemigrations<br />
+python manage.py migrate<br />
+python manage.py loaddata script.json<br />
