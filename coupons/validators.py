@@ -20,11 +20,14 @@ def createValidator(request):
     if data['type'] != "perpetual-use" and ('validupto' not in data or not data['validupto']):
         raise ValueError(40003, "validupto cannot be null for coupon type " + data['type'], 400)
 
-    if 'count' in data and not data['count'].isdigit():
-        raise ValueError(40004, "count must be a positive integer", 400)
+    if 'count' in data and not str(data['count']).isdigit():
+        raise ValueError(40004, "count must be a non negative integer", 400)
 
     if data['type'] == "multi-use" and ('count' not in data or not data['count']):
         raise ValueError(40005, "count cannot be null for coupon type " + data['type'], 400)
+
+    if 'validupto' in data and parse(data['validupto']) < datetime.now():
+        raise ValueError(40006, "validupto must be later than current date", 400)
 
 
 def updateValidator(request):
@@ -37,8 +40,8 @@ def updateValidator(request):
     if 'id' not in data or not data['id']:
         raise ValueError(40011, "id cannot be null", 400)
 
-    if 'count' in data and not data['count'].isdigit():
-        raise ValueError(40012, "count must be a positive integer", 400)
+    if 'count' in data and not str(data['count']).isdigit():
+        raise ValueError(40012, "count must be a non negative integer", 400)
 
     if 'type' in data and CouponType.objects.filter(coupon_type = data['type']).count == 0:
         raise ValueError(40013, "Invalid CouponType", 400)

@@ -40,10 +40,24 @@ def coupons(request):
         'id': coupon.id,
         'code': coupon.code,
         'count': coupon.count,
-        'validupto': str(coupon.validupto) } for coupon in coupons]
+        'type': coupon.coupon_type.coupon_type,
+        'validupto': str(coupon.validupto)
+        } for coupon in coupons]
 
     return HttpResponse(json.dumps(response), content_type="application/json")
 
+@require_http_methods(["GET"])
+def history(request):
+    response = dict()
+
+    history = History.objects.filter()
+
+    response['history'] = [{
+        'coupon': hist.coupon.code,
+        'user_id': hist.user_id
+        } for hist in history]
+
+    return HttpResponse(json.dumps(response), content_type="application/json")
 
 @require_http_methods(["POST"])
 def create(request):
@@ -54,7 +68,7 @@ def create(request):
         data = json.loads(request.body)
 
         if 'count' in data and data['type'] == "multi-use" :
-            count = data['count']
+            count = int(data['count'])
         else:
             count = 0
 
@@ -108,22 +122,22 @@ def update(request):
             if data['type'] == "single-use" and history.count() > 1:
                 raise ValueError(40311, "cannot set type to single-use as coupon has already been used more than once", 403)
 
-            if data['type'] == "single-use-per-user" and History.objects.filter(coupon = coupon).values('user_id').annotate(ucount=Count('user_id')).filter(ucount__gt = 0).count() > 0:
+            if data['type'] == "single-use-per-user" and History.objects.filter(coupon = coupon).values('user_id').annotate(ucount=Count('user_id')).filter(ucount__gt = 1).count() > 0:
                 raise ValueError(40312, "cannot set type to single-use-per user as coupon has already been used more than once by same user", 403)
 
-            if data['type'] == "multi-use" and coupon.count == 0 and ('count' not in data or not data['count'].isdigit()):
+            if data['type'] == "multi-use" and coupon.count == 0 and 'count' not in data:
                 raise ValueError(40313, "cannot set type to multi-use as count is not present", 403)
 
-            coupon.type = data['type']
+            coupon.coupon_type = CouponType.objects.filter(coupon_type = data['type'])[0]
 
         if 'count' in data:
-            if coupon.type == "multi-use" and history.count() > data['count']:
-                raise ValueError(40314, "cannot set count to " + data['count'] + " as coupon has already been used more number of times", 403)
+            if coupon.coupon_type.coupon_type == "multi-use" and history.count() > data['count']:
+                raise ValueError(40314, "cannot set count to " + str(data['count']) + " as coupon has already been used more number of times", 403)
 
-            if coupon.type != "multi-use":
+            if coupon.coupon_type.coupon_type != "multi-use":
                 data['count'] = 0
 
-            coupon.count = data['count']
+            coupon.count = int(data['count'])
 
         if 'validupto' in data:
             coupon.validupto = parse(data['validupto'])
@@ -159,13 +173,13 @@ def apply(request):
 
         history = History.objects.filter(coupon = coupon)
 
-        if coupon.type == "single-use" and history.count() > 0:
+        if coupon.coupon_type.coupon_type == "single-use" and history.count() > 0:
             raise ValueError(40321, "coupon has already been used", 403)
 
-        if coupon.type == "multi-use" and history.count() > coupon.count():
+        if coupon.coupon_type.coupon_type == "multi-use" and history.count() > coupon.count():
             raise ValueError(40322, "coupon has already been used maximum number of times", 403)
 
-        if coupon.type == "single-use-per-user":
+        if coupon.coupon_type.coupon_type == "single-use-per-user":
             history_user = History.objects.filter(coupon = coupon, user_id = data['user_id'])
 
             if history_user.count() > 0:
@@ -173,7 +187,7 @@ def apply(request):
 
         History.objects.create(
             coupon = coupon,
-            user = data['user_id']
+            user_id = data['user_id']
         )
 
         response['coupon'] = coupon.code
