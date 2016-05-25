@@ -30,6 +30,21 @@ def errorHandler(e):
     return HttpResponseBadRequest(json.dumps(response),content_type="application/json")
 
 
+@require_http_methods(["GET"])
+def coupons(request):
+    response = dict()
+
+    coupons = Coupon.objects.filter()
+
+    response['coupons'] = [{
+        'id': coupon.id,
+        'code': coupon.code,
+        'count': coupon.count,
+        'validupto': str(coupon.validupto) } for coupon in coupons]
+
+    return HttpResponse(json.dumps(response), content_type="application/json")
+
+
 @require_http_methods(["POST"])
 def create(request):
     response = dict()
@@ -135,6 +150,34 @@ def apply(request):
         applyValidator(request);
         data = json.loads(request.body)
 
+        coupons = Coupon.objects.filter(code = data['coupon'])
+
+        if coupons.count() == 0:
+            raise ValueError(40421, "coupon with given code not found", 404)
+
+        coupon = coupons[0]
+
+        history = History.objects.filter(coupon = coupon)
+
+        if coupon.type == "single-use" and history.count() > 0:
+            raise ValueError(40321, "coupon has already been used", 403)
+
+        if coupon.type == "multi-use" and history.count() > coupon.count():
+            raise ValueError(40322, "coupon has already been used maximum number of times", 403)
+
+        if coupon.type == "single-use-per-user":
+            history_user = History.objects.filter(coupon = coupon, user_id = data['user_id'])
+
+            if history_user.count() > 0:
+                raise ValueError(40322, "coupon has already been used by this user", 403)
+
+        History.objects.create(
+            coupon = coupon,
+            user = data['user_id']
+        )
+
+        response['coupon'] = coupon.code
+        response['user_id'] = data['user_id']
 
         return HttpResponse(json.dumps(response), content_type="application/json")
 

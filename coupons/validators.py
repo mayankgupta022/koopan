@@ -56,3 +56,6 @@ def applyValidator(request):
     data = json.loads(request.body)
     if 'coupon' not in data or not data['coupon']:
         raise ValueError(40021, "coupon cannot be null", 400)
+
+    if 'user_id' not in data or not data['user_id']:
+        raise ValueError(40022, "user_id cannot be null", 400)
