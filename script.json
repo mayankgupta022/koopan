@@ -1,0 +1,27 @@
+[
+    {
+        "model": "coupons.CouponType",
+        "pk": 1,
+        "fields": {
+            "coupon_type": "single-use"
+        }
+    },{
+        "model": "coupons.CouponType",
+        "pk": 2,
+        "fields": {
+            "coupon_type": "single-use-per-user"
+        }
+    },{
+        "model": "coupons.CouponType",
+        "pk": 3,
+        "fields": {
+            "coupon_type": "multi-use"
+        }
+    },{
+        "model": "coupons.CouponType",
+        "pk": 4,
+        "fields": {
+            "coupon_type": "perpetual-use"
+        }
+    }
+]
